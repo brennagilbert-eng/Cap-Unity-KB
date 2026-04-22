@@ -37,8 +37,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(422).json({ error: 'Could not extract text from this file.' });
     }
 
-    const truncated = text.length > 12000;
-    const content = truncated ? text.slice(0, 12000) + '\n\n[Document truncated for length]' : text;
+    const truncated = text.length > 50000;
+    const content = truncated ? text.slice(0, 50000) + '\n\n[Document truncated for length]' : text;
 
     return res.json({
       filename: name,

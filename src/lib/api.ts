@@ -63,10 +63,10 @@ export async function parseDocument(file: File): Promise<ParsedDoc> {
   text = text.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
   if (text.length < 20) throw new Error('Could not extract text from this PDF.');
 
-  const truncated = text.length > 12000;
+  const truncated = text.length > 50000;
   return {
     filename: file.name,
-    content: truncated ? text.slice(0, 12000) + '\n\n[Document truncated for length]' : text,
+    content: truncated ? text.slice(0, 50000) + '\n\n[Document truncated for length]' : text,
     truncated,
     charCount: text.length,
   };
