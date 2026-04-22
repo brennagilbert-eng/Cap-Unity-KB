@@ -1,11 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createRequire } from 'module';
+import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
-
-const require = createRequire(import.meta.url);
-// Use internal module directly to avoid pdf-parse loading its test file on require
-// (which fails in serverless environments)
-const pdfParse = require('pdf-parse/lib/pdf-parse.js') as (buf: Buffer) => Promise<{ text: string }>;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -56,6 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err) {
     console.error('[parse-doc]', err);
-    return res.status(500).json({ error: (err as Error).message });
+    const msg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+    return res.status(500).json({ error: msg });
   }
 }
