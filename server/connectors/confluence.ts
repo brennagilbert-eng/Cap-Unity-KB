@@ -23,7 +23,7 @@ export async function runConfluence(): Promise<number> {
   const base = process.env.CONFLUENCE_BASE_URL;
   const email = process.env.CONFLUENCE_EMAIL;
   const token = process.env.CONFLUENCE_API_TOKEN;
-  const spaceKeys = (process.env.CONFLUENCE_SPACE_KEY ?? '').split(',').filter(Boolean);
+  const spaceKeys = (process.env.CONFLUENCE_SPACE_KEY ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
   if (!base || !email || !token) {
     console.warn('[confluence] Missing env vars — skipping.');
