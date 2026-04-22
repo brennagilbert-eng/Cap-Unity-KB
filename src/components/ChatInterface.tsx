@@ -263,41 +263,7 @@ export default function ChatInterface({
       <div className="px-6 py-4 border-t border-border bg-white shrink-0">
         <div className="max-w-3xl mx-auto flex flex-col gap-2">
 
-          {/* Attached doc pill */}
-          {attachedDoc && (
-            <div className="flex items-center gap-2 bg-blue-50 border border-earth/20 rounded-lg px-3 py-2 text-xs">
-              <svg className="w-3.5 h-3.5 text-earth shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-              </svg>
-              <span className="text-slate-600 truncate flex-1 min-w-0">{attachedDoc.filename}</span>
-              {attachedDoc.truncated && <span className="text-sun shrink-0">truncated</span>}
-              <span className="text-slate-400 shrink-0">{Math.round(attachedDoc.charCount / 1000)}k chars</span>
-              <button onClick={removeAttachment} className="text-slate-400 hover:text-mars transition-colors shrink-0 ml-1" aria-label="Remove attachment">✕</button>
-            </div>
-          )}
-
-          {parsing && (
-            <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
-              <span className="animate-pulse">Parsing document…</span>
-            </div>
-          )}
-
           <div className="flex gap-2 items-end">
-            <input ref={fileInputRef} type="file" accept={ACCEPTED_TYPES} className="hidden" onChange={handleFileChange} />
-
-            {/* Attach button */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading || parsing}
-              title="Attach a document (PDF, Word, TXT)"
-              className="shrink-0 h-11 w-11 flex items-center justify-center rounded-lg border border-border bg-surface text-slate-400 hover:text-earth hover:border-earth/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-              </svg>
-            </button>
-
             {/* Mic button */}
             <button
               type="button"
