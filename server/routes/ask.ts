@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { searchDocuments } from '../lib/embeddings.js';
 import { openai, CHAT_MODEL } from '../lib/openai.js';
+import { UNITY_ASK_SYSTEM_PROMPT } from '../lib/unityAskSystemPrompt.js';
 import type { DocumentRow } from '../lib/supabase.js';
 
 export const askRouter = Router();
@@ -41,12 +42,7 @@ askRouter.post('/', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `You are Unity, an internal knowledge assistant for Capacity.
-You answer questions using ONLY the provided source excerpts.
-- Be concise but complete. Use markdown formatting where helpful.
-- Cite sources by their bracketed number, e.g. [1], [2].
-- If the provided context doesn't contain the answer, say so honestly — do not guess or hallucinate.
-- Do not invent URLs, ticket numbers, or feature names not present in the context.`,
+          content: UNITY_ASK_SYSTEM_PROMPT,
         },
         {
           role: 'user',
