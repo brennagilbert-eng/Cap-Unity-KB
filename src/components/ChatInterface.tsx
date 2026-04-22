@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Message, Source } from '../App';
 import MessageBubble from './MessageBubble';
 import { SOURCE_CONFIG } from './SourceBadge';
-import { askQuestion, parseDocument, type ParsedDoc } from '../lib/api';
+import { askQuestion, parseDocument, type ParsedDoc, type HistoryMessage } from '../lib/api';
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -85,7 +85,12 @@ export default function ChatInterface({
     setLoading(true);
 
     try {
-      const result = await askQuestion(text, activeSources, docCtx);
+      // Build conversation history from all completed (non-loading) messages before this turn
+      const history: HistoryMessage[] = messages
+        .filter((m) => !m.loading && m.content)
+        .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+      const result = await askQuestion(text, activeSources, docCtx, history);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === loadingMsg.id

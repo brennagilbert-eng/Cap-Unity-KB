@@ -7,10 +7,11 @@ import type { DocumentRow } from '../lib/supabase.js';
 export const askRouter = Router();
 
 askRouter.post('/', async (req, res) => {
-  const { question, sources, documentContext } = req.body as {
+  const { question, sources, documentContext, history } = req.body as {
     question?: string;
     sources?: string[];
     documentContext?: { filename: string; content: string } | null;
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>;
   };
 
   if (!question?.trim()) {
@@ -46,18 +47,24 @@ askRouter.post('/', async (req, res) => {
 
     const fullContext = docBlock + ragContext;
 
-    // 3. Generate grounded answer
+    // 3. Build multi-turn message history (cap at last 6 turns to stay within token budget)
+    const priorTurns = (Array.isArray(history) ? history : [])
+      .slice(-6)
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+    // 4. Generate grounded answer
     const completion = await openai.chat.completions.create({
       model: CHAT_MODEL,
-      temperature: 0.2,
+      temperature: 0.3,
       messages: [
         {
           role: 'system',
           content: UNITY_ASK_SYSTEM_PROMPT,
         },
+        ...priorTurns,
         {
           role: 'user',
-          content: `Question: ${question}\n\nContext:\n${fullContext}`,
+          content: `${question}\n\n---\nRelevant context from knowledge base:\n${fullContext}`,
         },
       ],
     });

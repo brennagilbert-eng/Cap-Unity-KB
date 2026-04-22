@@ -23,15 +23,26 @@ export async function parseDocument(file: File): Promise<ParsedDoc> {
   return res.json() as Promise<ParsedDoc>;
 }
 
+export interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export async function askQuestion(
   question: string,
   sources: Source[],
   documentContext?: { filename: string; content: string } | null,
+  history?: HistoryMessage[],
 ): Promise<AskResponse> {
   const res = await fetch('/api/ask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, sources, documentContext: documentContext ?? null }),
+    body: JSON.stringify({
+      question,
+      sources,
+      documentContext: documentContext ?? null,
+      history: history ?? [],
+    }),
   });
 
   if (!res.ok) {
