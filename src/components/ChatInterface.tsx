@@ -68,13 +68,13 @@ export default function ChatInterface({
         ),
       );
     } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === loadingMsg.id
             ? {
                 ...m,
-                content:
-                  '⚠️ Something went wrong fetching an answer. Check that the server is running and your `.env` is configured.',
+                content: `⚠️ **Could not get an answer.**\n\n${detail}\n\nFix \`.env\` and restart the server if the message mentions keys or Supabase. For “Failed to fetch”, run \`npm run dev\` and match Vite’s proxy port to Express (\`PORT\` / \`API_PORT\`).`,
                 loading: false,
               }
             : m,
