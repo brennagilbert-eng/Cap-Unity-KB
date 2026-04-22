@@ -3,6 +3,7 @@ import { runConfluence } from '../connectors/confluence.js';
 import { runJira } from '../connectors/jira.js';
 import { runSlack } from '../connectors/slack.js';
 import { runDrive } from '../connectors/drive.js';
+import { runWeb } from '../connectors/web.js';
 
 export const ingestRouter = Router();
 
@@ -11,6 +12,7 @@ const CONNECTORS: Record<string, () => Promise<number>> = {
   jira: runJira,
   slack: runSlack,
   drive: runDrive,
+  web: runWeb,
 };
 
 ingestRouter.post('/', async (req, res) => {

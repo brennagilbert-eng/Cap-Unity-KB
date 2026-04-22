@@ -2,9 +2,9 @@ import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 
-export type Source = 'confluence' | 'jira' | 'slack' | 'drive';
+export type Source = 'confluence' | 'jira' | 'slack' | 'drive' | 'web';
 
-export const ALL_SOURCES: Source[] = ['confluence', 'jira', 'slack', 'drive'];
+export const ALL_SOURCES: Source[] = ['confluence', 'jira', 'slack', 'drive', 'web'];
 
 export interface Citation {
   id: string;

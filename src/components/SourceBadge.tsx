@@ -21,6 +21,11 @@ const SOURCE_CONFIG: Record<Source, { label: string; color: string; icon: string
     color: 'bg-mars/20 text-mars border-mars/30',
     icon: '📁',
   },
+  web: {
+    label: 'Web',
+    color: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30',
+    icon: '🌐',
+  },
 };
 
 interface SourceBadgeProps {
