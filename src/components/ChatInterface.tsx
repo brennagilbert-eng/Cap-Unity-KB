@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Message, Source } from '../App';
 import MessageBubble from './MessageBubble';
 import { SOURCE_CONFIG } from './SourceBadge';
-import { askQuestion } from '../lib/api';
+import { askQuestion, parseDocument, type ParsedDoc } from '../lib/api';
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -17,6 +17,8 @@ const SUGGESTED_QUESTIONS = [
   'What products should we lead with for a mid-market customer on a tight timeline?',
 ];
 
+const ACCEPTED_TYPES = '.pdf,.doc,.docx,.txt,.md';
+
 export default function ChatInterface({
   messages,
   setMessages,
@@ -24,20 +26,48 @@ export default function ChatInterface({
 }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [attachedDoc, setAttachedDoc] = useState<ParsedDoc | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setParsing(true);
+    try {
+      const parsed = await parseDocument(file);
+      setAttachedDoc(parsed);
+    } catch (err) {
+      alert(`Could not parse file: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setParsing(false);
+      // Reset input so same file can be re-attached
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  function removeAttachment() {
+    setAttachedDoc(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
   async function handleSubmit(question?: string) {
     const text = (question ?? input).trim();
     if (!text || loading) return;
 
+    const docCtx = attachedDoc
+      ? { filename: attachedDoc.filename, content: attachedDoc.content }
+      : null;
+
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: text,
+      content: docCtx ? `📎 **${docCtx.filename}**\n\n${text}` : text,
       timestamp: new Date(),
     };
 
@@ -51,19 +81,15 @@ export default function ChatInterface({
 
     setMessages((prev) => [...prev, userMsg, loadingMsg]);
     setInput('');
+    setAttachedDoc(null);
     setLoading(true);
 
     try {
-      const result = await askQuestion(text, activeSources);
+      const result = await askQuestion(text, activeSources, docCtx);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === loadingMsg.id
-            ? {
-                ...m,
-                content: result.answer,
-                citations: result.citations,
-                loading: false,
-              }
+            ? { ...m, content: result.answer, citations: result.citations, loading: false }
             : m,
         ),
       );
@@ -74,7 +100,7 @@ export default function ChatInterface({
           m.id === loadingMsg.id
             ? {
                 ...m,
-                content: `⚠️ **Could not get an answer.**\n\n${detail}\n\nFix \`.env\` and restart the server if the message mentions keys or Supabase. For “Failed to fetch”, run \`npm run dev\` and match Vite’s proxy port to Express (\`PORT\` / \`API_PORT\`).`,
+                content: `⚠️ **Could not get an answer.**\n\n${detail}\n\nFix \`.env\` and restart the server if the message mentions keys or Supabase. For "Failed to fetch", run \`npm run dev\` and match Vite's proxy port to Express (\`PORT\` / \`API_PORT\`).`,
                 loading: false,
               }
             : m,
@@ -150,43 +176,85 @@ export default function ChatInterface({
 
       {/* Input */}
       <div className="px-6 py-4 border-t border-border bg-night shrink-0">
-        <div className="max-w-3xl mx-auto flex gap-3">
-          <input
-            className="input-base flex-1 text-sm"
-            placeholder="Describe a customer problem or use case…"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
-            disabled={loading}
-          />
-          <button
-            onClick={() => handleSubmit()}
-            disabled={!input.trim() || loading}
-            className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-                Asking…
-              </span>
-            ) : (
-              'Ask'
-            )}
-          </button>
+        <div className="max-w-3xl mx-auto flex flex-col gap-2">
+
+          {/* Attached doc pill */}
+          {attachedDoc && (
+            <div className="flex items-center gap-2 bg-card border border-earth/30 rounded-lg px-3 py-2 text-xs">
+              <svg className="w-3.5 h-3.5 text-earth shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+              <span className="text-slate-300 truncate flex-1 min-w-0">{attachedDoc.filename}</span>
+              {attachedDoc.truncated && (
+                <span className="text-sun shrink-0">truncated</span>
+              )}
+              <span className="text-slate-500 shrink-0">{Math.round(attachedDoc.charCount / 1000)}k chars</span>
+              <button
+                onClick={removeAttachment}
+                className="text-slate-500 hover:text-mars transition-colors shrink-0 ml-1"
+                aria-label="Remove attachment"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Parsing indicator */}
+          {parsing && (
+            <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
+              <span className="animate-pulse">Parsing document…</span>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ACCEPTED_TYPES}
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            {/* Attach button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading || parsing}
+              title="Attach a document (PDF, Word, TXT)"
+              className="shrink-0 h-11 w-11 flex items-center justify-center rounded-lg border border-border bg-card text-slate-400 hover:text-earth hover:border-earth/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+            </button>
+
+            <input
+              className="input-base flex-1 text-sm"
+              placeholder="Describe a customer problem or use case…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+              disabled={loading}
+            />
+            <button
+              onClick={() => handleSubmit()}
+              disabled={!input.trim() || loading}
+              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Asking…
+                </span>
+              ) : (
+                'Ask'
+              )}
+            </button>
+          </div>
         </div>
         <p className="text-center text-slate-700 text-xs mt-2">
           Answers are grounded in indexed sources. Always verify critical details.

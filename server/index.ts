@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { askRouter } from './routes/ask.js';
 import { ingestRouter } from './routes/ingest.js';
+import { parseDocRouter } from './routes/parseDoc.js';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -12,6 +13,7 @@ app.use(express.json());
 
 app.use('/api/ask', askRouter);
 app.use('/api/ingest', ingestRouter);
+app.use('/api/parse-doc', parseDocRouter);
 
 // Web-specific ingest endpoint used by the sidebar UI
 import { runWeb } from './connectors/web.js';

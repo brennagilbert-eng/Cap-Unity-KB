@@ -7,7 +7,11 @@ import type { DocumentRow } from '../lib/supabase.js';
 export const askRouter = Router();
 
 askRouter.post('/', async (req, res) => {
-  const { question, sources } = req.body as { question?: string; sources?: string[] };
+  const { question, sources, documentContext } = req.body as {
+    question?: string;
+    sources?: string[];
+    documentContext?: { filename: string; content: string } | null;
+  };
 
   if (!question?.trim()) {
     return res.status(400).json({ error: 'question is required' });
@@ -28,12 +32,19 @@ askRouter.post('/', async (req, res) => {
     }
 
     // 2. Build context block for the LLM
-    const context = docs
+    const ragContext = docs
       .map(
         (d, i) =>
           `[${i + 1}] Source: ${d.source} | Title: ${d.title}\nURL: ${d.url}\n${d.content}`,
       )
       .join('\n\n---\n\n');
+
+    // Optionally prepend uploaded document context
+    const docBlock = documentContext?.content
+      ? `--- UPLOADED DOCUMENT: ${documentContext.filename} ---\n${documentContext.content}\n--- END OF DOCUMENT ---\n\n`
+      : '';
+
+    const fullContext = docBlock + ragContext;
 
     // 3. Generate grounded answer
     const completion = await openai.chat.completions.create({
@@ -46,7 +57,7 @@ askRouter.post('/', async (req, res) => {
         },
         {
           role: 'user',
-          content: `Question: ${question}\n\nContext:\n${context}`,
+          content: `Question: ${question}\n\nContext:\n${fullContext}`,
         },
       ],
     });
