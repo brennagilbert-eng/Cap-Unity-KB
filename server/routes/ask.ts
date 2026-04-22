@@ -22,7 +22,7 @@ askRouter.post('/', async (req, res) => {
 
   try {
     // 1. Retrieve relevant chunks
-    const docs: DocumentRow[] = await searchDocuments(question, activeSources, 6);
+    const docs: DocumentRow[] = await searchDocuments(question, activeSources, 10);
 
     if (docs.length === 0) {
       return res.json({

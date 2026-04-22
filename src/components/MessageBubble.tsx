@@ -135,7 +135,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
             Sources
           </p>
           <ul className="flex flex-col gap-2 list-none m-0 p-0">
-            {message.citations.map((citation) => (
+            {message.citations.slice(0, 3).map((citation) => (
               <li key={citation.id}>
                 <a
                   href={citation.url}
