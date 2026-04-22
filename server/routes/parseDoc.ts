@@ -1,8 +1,11 @@
 import { Router } from 'express';
+import { createRequire } from 'module';
 import multer from 'multer';
 import mammoth from 'mammoth';
-// @ts-ignore — pdf-parse has no bundled types
-import pdfParse from 'pdf-parse';
+
+const require = createRequire(import.meta.url);
+// pdf-parse is CJS — load via require for reliable ESM interop
+const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
 
 export const parseDocRouter = Router();
 
