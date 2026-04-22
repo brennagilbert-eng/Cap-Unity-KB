@@ -12,29 +12,64 @@ export interface ParsedDoc {
   charCount: number;
 }
 
-export async function parseDocument(file: File): Promise<ParsedDoc> {
-  // Read file as base64 for serverless-friendly JSON upload
-  const data = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Strip the data URL prefix (e.g. "data:application/pdf;base64,")
-      resolve(result.split(',')[1]);
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+async function parsePdfClientSide(file: File): Promise<string> {
+  const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist');
+  // Use the bundled legacy worker to avoid CDN dependency
+  GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url,
+  ).toString();
 
-  const res = await fetch('/api/parse-doc', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: file.name, type: file.type, data }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error ?? `Parse failed: ${res.status}`);
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await getDocument({ data: arrayBuffer }).promise;
+  const pages: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    pages.push(content.items.map((item: { str?: string }) => item.str ?? '').join(' '));
   }
-  return res.json() as Promise<ParsedDoc>;
+  return pages.join('\n\n');
+}
+
+export async function parseDocument(file: File): Promise<ParsedDoc> {
+  const isPdf = file.type === 'application/pdf' || file.name.match(/\.pdf$/i);
+
+  let text: string;
+
+  if (isPdf) {
+    // Parse PDFs entirely in the browser — no serverless dependency
+    text = await parsePdfClientSide(file);
+  } else {
+    // Word / text files — send to server
+    const data = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(',')[1]);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
+    const res = await fetch('/api/parse-doc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: file.name, type: file.type, data }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { error?: string }).error ?? `Parse failed: ${res.status}`);
+    }
+    return res.json() as Promise<ParsedDoc>;
+  }
+
+  text = text.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (text.length < 20) throw new Error('Could not extract text from this PDF.');
+
+  const truncated = text.length > 12000;
+  return {
+    filename: file.name,
+    content: truncated ? text.slice(0, 12000) + '\n\n[Document truncated for length]' : text,
+    truncated,
+    charCount: text.length,
+  };
 }
 
 export interface HistoryMessage {

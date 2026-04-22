@@ -19,11 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const buffer = Buffer.from(data, 'base64');
     let text = '';
 
-    if (type === 'application/pdf' || name.match(/\.pdf$/i)) {
-      const { default: pdfParse } = await import('pdf-parse');
-      const parsed = await pdfParse(buffer);
-      text = parsed.text;
-    } else if (
+    if (
       type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
       name.match(/\.docx$/i)
     ) {
@@ -31,6 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const result = await mammoth.extractRawText({ buffer });
       text = result.value;
     } else {
+      // Plain text / markdown
       text = buffer.toString('utf8');
     }
 
@@ -51,7 +48,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err) {
     console.error('[parse-doc]', err);
-    const msg = err instanceof Error ? `${err.message} ||| ${err.stack}` : String(err);
-    return res.status(500).json({ error: msg });
+    return res.status(500).json({ error: (err as Error).message });
   }
 }
