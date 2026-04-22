@@ -3,16 +3,16 @@ import * as cheerio from 'cheerio';
 import { upsertDocument } from '../lib/embeddings.js';
 
 const CHUNK_SIZE = 1500;  // characters per chunk
-const CRAWL_DELAY_MS = 500; // be polite to servers
+const CRAWL_DELAY_MS = 400; // be polite to servers
 
 /** Extract clean readable text from an HTML page */
 function extractText($: cheerio.CheerioAPI): string {
   // Remove noise elements
-  $('script, style, nav, footer, header, iframe, noscript, [role="navigation"]').remove();
+  $('script, style, nav, footer, header, iframe, noscript, [role="navigation"], .sidebar, .toc, .breadcrumb').remove();
 
   // Prefer main content areas
   const main =
-    $('main, article, [role="main"], .content, #content, .docs-content, .markdown-body')
+    $('main, article, [role="main"], .content, #content, .docs-content, .markdown-body, .article-body, .post-body')
       .first()
       .text() || $('body').text();
 
@@ -23,7 +23,7 @@ function extractText($: cheerio.CheerioAPI): string {
 function extractTitle($: cheerio.CheerioAPI, url: string): string {
   return (
     $('h1').first().text().trim() ||
-    $('title').text().trim() ||
+    $('title').text().replace(/\s*[|\-–]\s*.+$/, '').trim() || // strip site name suffix
     new URL(url).pathname
   );
 }
@@ -38,9 +38,11 @@ function extractLinks($: cheerio.CheerioAPI, baseUrl: string): string[] {
     try {
       const resolved = new URL(href, baseUrl);
       if (resolved.hostname === hostname && resolved.origin === origin) {
-        // Normalise — strip hash and trailing slash
+        // Normalise — strip hash, query params that are just anchors, and trailing slash
         resolved.hash = '';
         const clean = resolved.toString().replace(/\/$/, '');
+        // Skip binary/media file extensions
+        if (/\.(pdf|png|jpg|jpeg|gif|svg|ico|zip|mp4|mp3|woff|woff2|ttf|css|js)(\?|$)/i.test(clean)) return;
         links.push(clean);
       }
     } catch {
@@ -62,26 +64,45 @@ function chunkText(text: string, size = CHUNK_SIZE): string[] {
   return chunks;
 }
 
-/** Fetch and index a single URL */
-async function indexPage(url: string): Promise<number> {
+interface FetchResult {
+  text: string;
+  title: string;
+  links: string[];
+}
+
+/** Fetch a URL once, return text + links together (avoids double-fetch) */
+async function fetchPage(url: string, extractLinksFlag: boolean): Promise<FetchResult | null> {
   let html: string;
   try {
     const res = await axios.get<string>(url, {
-      timeout: 10_000,
-      headers: { 'User-Agent': 'Unity-KnowledgeBot/1.0 (internal indexer)' },
+      timeout: 15_000,
+      headers: {
+        'User-Agent': 'Unity-KnowledgeBot/1.0 (internal indexer; contact brenna.gilbert@capacity.com)',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
       responseType: 'text',
     });
     html = res.data;
   } catch (err) {
     console.warn(`  [web] Could not fetch ${url}: ${(err as Error).message}`);
-    return 0;
+    return null;
   }
 
   const $ = cheerio.load(html);
   const text = extractText($);
   const title = extractTitle($, url);
+  const links = extractLinksFlag ? extractLinks($, url) : [];
 
-  if (text.length < 100) return 0; // skip near-empty pages
+  return { text, title, links };
+}
+
+/** Fetch and index a single URL, return chunks written + links found */
+async function indexPage(url: string, crawl: boolean): Promise<{ chunks: number; links: string[] }> {
+  const result = await fetchPage(url, crawl);
+  if (!result) return { chunks: 0, links: [] };
+
+  const { text, title, links } = result;
+  if (text.length < 80) return { chunks: 0, links }; // skip near-empty pages
 
   const chunks = chunkText(text);
   for (let i = 0; i < chunks.length; i++) {
@@ -94,7 +115,7 @@ async function indexPage(url: string): Promise<number> {
     });
   }
 
-  return chunks.length;
+  return { chunks: chunks.length, links };
 }
 
 export interface WebCrawlOptions {
@@ -128,41 +149,40 @@ export async function runWeb(opts?: WebCrawlOptions): Promise<number> {
   let totalChunks = 0;
 
   for (const seed of seeds) {
-    console.log(`  [web] Indexing ${seed}${crawl ? ' (+ crawl)' : ''}`);
+    console.log(`\n[web] Starting: ${seed}${crawl ? ` (full crawl, max ${maxPages} pages)` : ''}`);
     const visited = new Set<string>();
     const queue: string[] = [seed];
+    let pageCount = 0;
+    let chunkCount = 0;
 
     while (queue.length > 0 && visited.size < maxPages) {
       const url = queue.shift()!;
       if (visited.has(url)) continue;
       visited.add(url);
+      pageCount++;
 
-      const chunks = await indexPage(url);
+      const { chunks, links } = await indexPage(url, crawl);
+      chunkCount += chunks;
       totalChunks += chunks;
-      if (chunks > 0) process.stdout.write(`    ✓ ${url} (${chunks} chunks)\n`);
 
-      if (crawl && chunks > 0) {
-        // Fetch again to extract links (reuse cached response ideally, fine for now)
-        try {
-          const res = await axios.get<string>(url, {
-            timeout: 10_000,
-            headers: { 'User-Agent': 'Unity-KnowledgeBot/1.0' },
-            responseType: 'text',
-          });
-          const $ = cheerio.load(res.data as string);
-          const links = extractLinks($, url);
-          for (const link of links) {
-            if (!visited.has(link)) queue.push(link);
-          }
-        } catch {
-          // skip link extraction failure
+      if (chunks > 0) {
+        process.stdout.write(`  [${pageCount}/${maxPages}] ✓ ${url} (${chunks} chunks)\n`);
+      } else {
+        process.stdout.write(`  [${pageCount}/${maxPages}] – ${url} (skipped)\n`);
+      }
+
+      if (crawl) {
+        for (const link of links) {
+          if (!visited.has(link) && !queue.includes(link)) queue.push(link);
         }
       }
 
       if (queue.length > 0) await new Promise((r) => setTimeout(r, CRAWL_DELAY_MS));
     }
 
-    console.log(`  [web] ${seed}: ${visited.size} pages, ${totalChunks} chunks`);
+    console.log(`\n[web] Done: ${seed}`);
+    console.log(`  Pages visited: ${visited.size} | Chunks indexed: ${chunkCount}`);
+    if (queue.length > 0) console.log(`  ${queue.length} pages remaining in queue (hit maxPages limit)`);
   }
 
   return totalChunks;
