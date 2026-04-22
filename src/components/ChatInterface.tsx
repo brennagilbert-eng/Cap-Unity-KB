@@ -11,10 +11,10 @@ interface ChatInterfaceProps {
 }
 
 const SUGGESTED_QUESTIONS = [
-  'What languages does Capacity support for TTS?',
-  "What's on the product roadmap for Q2?",
-  'How do we position Capacity for mid-market customers?',
-  'What Jira issues are open for the SMS platform?',
+  'A customer needs to deflect Tier 1 support tickets — what do we recommend?',
+  'Client wants to add voice AI to their contact center. What does our stack support?',
+  'How do we solution for a client switching from English to Spanish IVR?',
+  'What products should we lead with for a mid-market customer on a tight timeline?',
 ];
 
 export default function ChatInterface({
@@ -118,11 +118,11 @@ export default function ChatInterface({
             <div>
               <div className="unity-mark mx-auto mb-5 h-10 w-10 rounded-xl text-base">U</div>
               <h3 className="text-white font-semibold text-xl tracking-tight">
-                What do you want to know?
+                Describe a customer problem.
               </h3>
               <p className="text-slate-500 text-sm mt-3 max-w-md mx-auto leading-relaxed">
-                Ask anything about Capacity's product, roadmap, positioning, or past work. Answers
-                draw on Confluence, Jira, Slack, Drive, and indexed web pages.
+                Unity acts as your solutions consultant — map customer needs to the right Capacity
+                products across the full portfolio, grounded in real documentation.
               </p>
             </div>
 
@@ -153,7 +153,7 @@ export default function ChatInterface({
         <div className="max-w-3xl mx-auto flex gap-3">
           <input
             className="input-base flex-1 text-sm"
-            placeholder="Ask a question about Capacity…"
+            placeholder="Describe a customer problem or use case…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
