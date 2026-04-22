@@ -21,19 +21,15 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <div className="flex flex-col gap-3 max-w-[85%]">
-      {/* Avatar + header */}
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-earth to-mars flex items-center justify-center text-white text-xs font-bold shrink-0">
-          U
-        </div>
-        <span className="text-slate-500 text-xs">Unity</span>
-        <span className="text-slate-700 text-xs">
+      <div className="flex items-center gap-2.5">
+        <div className="unity-mark h-9 w-9 rounded-lg text-xs">U</div>
+        <span className="text-slate-400 text-xs font-medium">Unity</span>
+        <span className="text-slate-600 text-xs tabular-nums">
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
 
-      {/* Content */}
-      <div className="card px-5 py-4">
+      <div className="card px-5 py-4 shadow-sm shadow-black/10">
         {message.loading ? (
           <div className="flex items-center gap-2 text-slate-400 text-sm">
             <span className="animate-pulse">Searching</span>
@@ -56,29 +52,30 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
 
       {/* Citations */}
       {message.citations && message.citations.length > 0 && (
-        <div className="flex flex-col gap-2 pl-1">
-          <p className="text-slate-600 text-xs uppercase tracking-wider font-semibold">
+        <div className="rounded-xl border border-border/80 bg-card/60 px-3 py-3 -mt-0.5">
+          <p className="text-slate-500 text-[0.65rem] uppercase tracking-wider font-semibold mb-2">
             Sources
           </p>
-          <div className="flex flex-col gap-1.5">
+          <ul className="flex flex-col gap-2 list-none m-0 p-0">
             {message.citations.map((citation) => (
-              <a
-                key={citation.id}
-                href={citation.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 group"
-              >
-                <SourceBadge source={citation.source} />
-                <span className="text-xs text-slate-400 group-hover:text-earth transition-colors truncate flex-1">
-                  {citation.title}
-                </span>
-                <span className="text-xs text-slate-700 shrink-0">
-                  {Math.round(citation.similarity * 100)}%
-                </span>
-              </a>
+              <li key={citation.id}>
+                <a
+                  href={citation.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-lg px-1 py-1 -mx-1 group hover:bg-surface/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
+                >
+                  <SourceBadge source={citation.source} />
+                  <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors truncate flex-1 min-w-0">
+                    {citation.title}
+                  </span>
+                  <span className="text-[0.65rem] text-slate-600 tabular-nums shrink-0">
+                    {Math.round(citation.similarity * 100)}%
+                  </span>
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
     </div>
