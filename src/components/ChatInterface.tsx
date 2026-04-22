@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
 import type { Message, Source } from '../App';
 import MessageBubble from './MessageBubble';
 import { askQuestion, parseDocument, type ParsedDoc, type HistoryMessage } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 interface ChatInterfaceProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   activeSources: Source[];
   onToggleSource: (source: Source) => void;
+  user: User;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -32,6 +35,7 @@ export default function ChatInterface({
   setMessages,
   activeSources,
   onToggleSource,
+  user,
 }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -182,16 +186,38 @@ export default function ChatInterface({
       <header className="px-6 py-3 border-b border-border bg-white flex items-center justify-between shrink-0 shadow-sm shadow-blue-50">
         <img src="/capacity-logo.png" alt="Capacity" className="h-7 w-auto" />
         <div />
-        {messages.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setMessages([])}
-            className="text-xs text-slate-400 hover:text-earth transition-colors rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
-          >
-            Clear chat
-          </button>
-        )}
-        {messages.length === 0 && <div className="w-20" />}
+        <div className="flex items-center gap-3">
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setMessages([])}
+              className="text-xs text-slate-400 hover:text-earth transition-colors rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
+            >
+              Clear chat
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            {user.user_metadata?.avatar_url ? (
+              <img
+                src={user.user_metadata.avatar_url}
+                alt={user.user_metadata?.full_name ?? 'User'}
+                className="w-7 h-7 rounded-full border border-border"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-earth/10 border border-border flex items-center justify-center text-xs font-medium text-earth">
+                {(user.email ?? '?')[0].toUpperCase()}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => supabase.auth.signOut()}
+              className="text-xs text-slate-400 hover:text-mars transition-colors"
+              title="Sign out"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* Messages */}
