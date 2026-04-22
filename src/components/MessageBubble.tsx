@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Message } from '../App';
 import SourceBadge from './SourceBadge';
 
@@ -44,8 +45,88 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
             </span>
           </div>
         ) : (
-          <div className="prose prose-invert prose-sm max-w-none prose-p:text-slate-200 prose-headings:text-white prose-strong:text-white prose-code:text-sun prose-a:text-earth">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+          <div className="unity-prose">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => (
+                  <h1 className="text-white font-semibold text-base mt-5 mb-2 first:mt-0">{children}</h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-white font-semibold text-sm mt-4 mb-1.5 first:mt-0">{children}</h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-slate-200 font-medium text-sm mt-3 mb-1 first:mt-0">{children}</h3>
+                ),
+                p: ({ children }) => (
+                  <p className="text-slate-200 text-sm leading-relaxed mb-3 last:mb-0">{children}</p>
+                ),
+                ul: ({ children }) => (
+                  <ul className="text-slate-200 text-sm space-y-1 mb-3 last:mb-0 pl-4 list-none">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="text-slate-200 text-sm space-y-1 mb-3 last:mb-0 pl-4 list-decimal">{children}</ol>
+                ),
+                li: ({ children }) => (
+                  <li className="flex gap-2 items-start leading-relaxed">
+                    <span className="text-earth mt-[0.35em] shrink-0">•</span>
+                    <span>{children}</span>
+                  </li>
+                ),
+                strong: ({ children }) => (
+                  <strong className="text-white font-semibold">{children}</strong>
+                ),
+                em: ({ children }) => (
+                  <em className="text-slate-300 italic">{children}</em>
+                ),
+                code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) =>
+                  inline ? (
+                    <code className="text-sun bg-surface px-1.5 py-0.5 rounded text-xs font-mono">
+                      {children}
+                    </code>
+                  ) : (
+                    <pre className="bg-surface border border-border rounded-lg px-4 py-3 overflow-x-auto mb-3 last:mb-0">
+                      <code className="text-sun text-xs font-mono">{children}</code>
+                    </pre>
+                  ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-2 border-earth pl-3 my-2 text-slate-400 italic text-sm">
+                    {children}
+                  </blockquote>
+                ),
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-earth hover:text-sky-300 underline underline-offset-2 transition-colors"
+                  >
+                    {children}
+                  </a>
+                ),
+                hr: () => <hr className="border-border my-4" />,
+                table: ({ children }) => (
+                  <div className="overflow-x-auto mb-3 last:mb-0">
+                    <table className="w-full text-sm border-collapse">{children}</table>
+                  </div>
+                ),
+                thead: ({ children }) => (
+                  <thead className="bg-surface text-slate-300 font-medium">{children}</thead>
+                ),
+                tbody: ({ children }) => <tbody className="divide-y divide-border">{children}</tbody>,
+                tr: ({ children }) => <tr className="hover:bg-surface/50 transition-colors">{children}</tr>,
+                th: ({ children }) => (
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-border">
+                    {children}
+                  </th>
+                ),
+                td: ({ children }) => (
+                  <td className="px-3 py-2 text-slate-200 text-sm">{children}</td>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
           </div>
         )}
       </div>
