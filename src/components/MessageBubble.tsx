@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Message } from '../App';
@@ -130,31 +131,60 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
 
       {/* Citations */}
       {message.citations && message.citations.length > 0 && (
-        <div className="rounded-xl border border-border bg-surface px-3 py-3 -mt-0.5">
-          <p className="text-slate-400 text-[0.65rem] uppercase tracking-wider font-semibold mb-2">
-            Sources
-          </p>
-          <ul className="flex flex-col gap-2 list-none m-0 p-0">
-            {message.citations.slice(0, 3).map((citation) => (
-              <li key={citation.id}>
-                <a
-                  href={citation.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-lg px-1 py-1 -mx-1 group hover:bg-blue-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
-                >
-                  <SourceBadge source={citation.source} />
-                  <span className="text-xs text-slate-500 group-hover:text-earth transition-colors truncate flex-1 min-w-0">
-                    {citation.title}
-                  </span>
-                  <span className="text-[0.65rem] text-slate-400 tabular-nums shrink-0">
-                    {Math.round(citation.similarity * 100)}%
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <CitationList citations={message.citations} />
+      )}
+    </div>
+  );
+}
+
+function CitationList({ citations }: { citations: NonNullable<Message['citations']> }) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? citations : citations.slice(0, 3);
+  const extras = citations.length - 3;
+
+  return (
+    <div className="rounded-xl border border-border bg-surface px-3 py-3 -mt-0.5">
+      <p className="text-slate-400 text-[0.65rem] uppercase tracking-wider font-semibold mb-2">
+        Sources
+      </p>
+      <ul className="flex flex-col gap-2 list-none m-0 p-0">
+        {visible.map((citation) => (
+          <li key={citation.id}>
+            <a
+              href={citation.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-lg px-1 py-1 -mx-1 group hover:bg-blue-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
+            >
+              <SourceBadge source={citation.source} />
+              <span className="text-xs text-slate-500 group-hover:text-earth transition-colors truncate flex-1 min-w-0">
+                {citation.title}
+              </span>
+              <span className="text-[0.65rem] text-slate-400 tabular-nums shrink-0">
+                {Math.round(citation.similarity * 100)}%
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      {extras > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 flex items-center gap-1 text-xs text-slate-400 hover:text-earth transition-colors focus-visible:outline-none"
+        >
+          <svg
+            className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+          {expanded ? 'Show less' : `${extras} more source${extras > 1 ? 's' : ''}`}
+        </button>
       )}
     </div>
   );
