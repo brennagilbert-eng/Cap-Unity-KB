@@ -4,6 +4,10 @@
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 30
+    },
+    "api/parse-doc.ts": {
+      "maxDuration": 30,
+      "memory": 1024
     }
   },
   "rewrites": [
