@@ -13,9 +13,23 @@ export interface ParsedDoc {
 }
 
 export async function parseDocument(file: File): Promise<ParsedDoc> {
-  const form = new FormData();
-  form.append('file', file);
-  const res = await fetch('/api/parse-doc', { method: 'POST', body: form });
+  // Read file as base64 for serverless-friendly JSON upload
+  const data = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Strip the data URL prefix (e.g. "data:application/pdf;base64,")
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
+  const res = await fetch('/api/parse-doc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: file.name, type: file.type, data }),
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error ?? `Parse failed: ${res.status}`);
