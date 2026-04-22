@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Message, Source } from '../App';
 import MessageBubble from './MessageBubble';
 import { askQuestion, parseDocument, type ParsedDoc, type HistoryMessage } from '../lib/api';
@@ -19,6 +19,14 @@ const SUGGESTED_QUESTIONS = [
 
 const ACCEPTED_TYPES = '.pdf,.doc,.docx,.txt,.md';
 
+// Extend Window for webkit speech
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
+
 export default function ChatInterface({
   messages,
   setMessages,
@@ -29,12 +37,53 @@ export default function ChatInterface({
   const [loading, setLoading] = useState(false);
   const [attachedDoc, setAttachedDoc] = useState<ParsedDoc | null>(null);
   const [parsing, setParsing] = useState(false);
+  const [listening, setListening] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [input]);
+
+  // Speech-to-text
+  const toggleListening = useCallback(() => {
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!SR) {
+      alert('Speech recognition is not supported in this browser. Try Chrome.');
+      return;
+    }
+
+    if (listening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    const recognition = new SR();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    recognition.onresult = (e) => {
+      const transcript = e.results[0]?.[0]?.transcript ?? '';
+      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+  }, [listening]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -121,16 +170,8 @@ export default function ChatInterface({
     <div className="flex flex-col h-full">
       {/* Top bar */}
       <header className="px-6 py-3 border-b border-border bg-white flex items-center justify-between shrink-0 shadow-sm shadow-blue-50">
-        {/* Logo */}
-        <img
-          src="/capacity-logo.png"
-          alt="Capacity"
-          className="h-7 w-auto"
-        />
-
+        <img src="/capacity-logo.png" alt="Capacity" className="h-7 w-auto" />
         <div />
-
-        {/* Clear button */}
         {messages.length > 0 && (
           <button
             type="button"
@@ -149,7 +190,7 @@ export default function ChatInterface({
           <div className="max-w-3xl mx-auto w-full flex flex-col items-center justify-center min-h-[min(70vh,36rem)] gap-10 text-center py-8">
             <div>
               <div className="mx-auto mb-5">
-                <img src="/capacity-logo.png" alt="Capacity" className="h-10 w-auto mx-auto opacity-20" />
+                <img src="/capacity-logo.png" alt="Capacity" className="h-10 w-auto mx-auto" />
               </div>
               <h3 className="text-slate-800 font-semibold text-xl tracking-tight">
                 Describe a customer problem.
@@ -193,17 +234,9 @@ export default function ChatInterface({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
               <span className="text-slate-600 truncate flex-1 min-w-0">{attachedDoc.filename}</span>
-              {attachedDoc.truncated && (
-                <span className="text-sun shrink-0">truncated</span>
-              )}
+              {attachedDoc.truncated && <span className="text-sun shrink-0">truncated</span>}
               <span className="text-slate-400 shrink-0">{Math.round(attachedDoc.charCount / 1000)}k chars</span>
-              <button
-                onClick={removeAttachment}
-                className="text-slate-400 hover:text-mars transition-colors shrink-0 ml-1"
-                aria-label="Remove attachment"
-              >
-                ✕
-              </button>
+              <button onClick={removeAttachment} className="text-slate-400 hover:text-mars transition-colors shrink-0 ml-1" aria-label="Remove attachment">✕</button>
             </div>
           )}
 
@@ -213,14 +246,8 @@ export default function ChatInterface({
             </div>
           )}
 
-          <div className="flex gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPTED_TYPES}
-              className="hidden"
-              onChange={handleFileChange}
-            />
+          <div className="flex gap-2 items-end">
+            <input ref={fileInputRef} type="file" accept={ACCEPTED_TYPES} className="hidden" onChange={handleFileChange} />
 
             {/* Attach button */}
             <button
@@ -235,18 +262,48 @@ export default function ChatInterface({
               </svg>
             </button>
 
-            <input
-              className="input-base flex-1 text-sm"
+            {/* Mic button */}
+            <button
+              type="button"
+              onClick={toggleListening}
+              disabled={loading}
+              title={listening ? 'Stop listening' : 'Speak your question'}
+              className={`shrink-0 h-11 w-11 flex items-center justify-center rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35 ${
+                listening
+                  ? 'bg-mars/10 border-mars/40 text-mars animate-pulse'
+                  : 'border-border bg-surface text-slate-400 hover:text-earth hover:border-earth/40'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" strokeLinecap="round" />
+                <line x1="8" y1="23" x2="16" y2="23" strokeLinecap="round" />
+              </svg>
+            </button>
+
+            {/* Auto-resizing textarea */}
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              className="input-base flex-1 text-sm resize-none overflow-hidden leading-relaxed"
+              style={{ minHeight: '44px', maxHeight: '200px' }}
               placeholder="Describe a customer problem or use case…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
               disabled={loading}
             />
+
             <button
               onClick={() => handleSubmit()}
               disabled={!input.trim() || loading}
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed shrink-0 h-11"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
