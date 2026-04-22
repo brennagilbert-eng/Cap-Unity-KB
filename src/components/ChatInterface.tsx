@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Message, Source } from '../App';
-import { ALL_SOURCES } from '../App';
 import MessageBubble from './MessageBubble';
-import { SOURCE_CONFIG } from './SourceBadge';
 import { askQuestion, parseDocument, type ParsedDoc, type HistoryMessage } from '../lib/api';
 
 interface ChatInterfaceProps {
@@ -130,28 +128,7 @@ export default function ChatInterface({
           className="h-7 w-auto"
         />
 
-        {/* Source filter pills */}
-        <div className="flex items-center gap-1.5">
-          {ALL_SOURCES.map((source) => {
-            const { label, icon } = SOURCE_CONFIG[source];
-            const active = activeSources.includes(source);
-            return (
-              <button
-                key={source}
-                type="button"
-                onClick={() => onToggleSource(source)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  active
-                    ? 'bg-earth text-white shadow-sm shadow-earth/30'
-                    : 'bg-surface text-slate-500 hover:text-earth hover:bg-blue-50 border border-border'
-                }`}
-              >
-                <span>{icon}</span>
-                <span>{label}</span>
-              </button>
-            );
-          })}
-        </div>
+        <div />
 
         {/* Clear button */}
         {messages.length > 0 && (
