@@ -1,6 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import pdfParse from 'pdf-parse';
-import mammoth from 'mammoth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -10,7 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { name, type, data } = req.body as {
     name?: string;
     type?: string;
-    data?: string; // base64-encoded file content
+    data?: string;
   };
 
   if (!data || !name) {
@@ -22,12 +20,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let text = '';
 
     if (type === 'application/pdf' || name.match(/\.pdf$/i)) {
+      const { default: pdfParse } = await import('pdf-parse');
       const parsed = await pdfParse(buffer);
       text = parsed.text;
     } else if (
       type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
       name.match(/\.docx$/i)
     ) {
+      const mammoth = await import('mammoth');
       const result = await mammoth.extractRawText({ buffer });
       text = result.value;
     } else {
@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err) {
     console.error('[parse-doc]', err);
-    const msg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+    const msg = err instanceof Error ? `${err.message} ||| ${err.stack}` : String(err);
     return res.status(500).json({ error: msg });
   }
 }
