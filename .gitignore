@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Environment variables — NEVER commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Keep the example so teammates know what vars are needed
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Editor
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Vite cache
+.vite/
