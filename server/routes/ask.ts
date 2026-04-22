@@ -6,6 +6,9 @@ import type { DocumentRow } from '../lib/supabase.js';
 
 export const askRouter = Router();
 
+const INTERNAL_SOURCES = new Set(['confluence', 'jira', 'slack', 'drive']);
+const EXTERNAL_SOURCES = new Set(['web']);
+
 askRouter.post('/', async (req, res) => {
   const { question, sources, documentContext, history } = req.body as {
     question?: string;
@@ -32,13 +35,27 @@ askRouter.post('/', async (req, res) => {
       });
     }
 
-    // 2. Build context block for the LLM
-    const ragContext = docs
-      .map(
-        (d, i) =>
-          `[${i + 1}] Source: ${d.source} | Title: ${d.title}\nURL: ${d.url}\n${d.content}`,
-      )
-      .join('\n\n---\n\n');
+    // 2. Split into internal (Capacity/Confluence/Drive/Jira) vs external (web/API docs)
+    const internal = docs.filter((d) => INTERNAL_SOURCES.has(d.source));
+    const external = docs.filter((d) => EXTERNAL_SOURCES.has(d.source));
+
+    // Build numbered context — internal first, then external, continuous numbering
+    let idx = 1;
+    const internalBlock = internal.length
+      ? `## INTERNAL — Capacity docs, Confluence, past projects, playbooks\n\n` +
+        internal
+          .map((d) => `[${idx++}] ${d.source.toUpperCase()} | ${d.title}\nURL: ${d.url}\n${d.content}`)
+          .join('\n\n---\n\n')
+      : '';
+
+    const externalBlock = external.length
+      ? `## EXTERNAL — Third-party platform documentation\n\n` +
+        external
+          .map((d) => `[${idx++}] ${d.source.toUpperCase()} | ${d.title}\nURL: ${d.url}\n${d.content}`)
+          .join('\n\n---\n\n')
+      : '';
+
+    const ragContext = [internalBlock, externalBlock].filter(Boolean).join('\n\n');
 
     // Optionally prepend uploaded document context
     const docBlock = documentContext?.content
@@ -47,7 +64,7 @@ askRouter.post('/', async (req, res) => {
 
     const fullContext = docBlock + ragContext;
 
-    // 3. Build multi-turn message history (cap at last 6 turns to stay within token budget)
+    // 3. Build multi-turn message history (cap at last 6 turns)
     const priorTurns = (Array.isArray(history) ? history : [])
       .slice(-6)
       .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
@@ -57,22 +74,20 @@ askRouter.post('/', async (req, res) => {
       model: CHAT_MODEL,
       temperature: 0.3,
       messages: [
-        {
-          role: 'system',
-          content: UNITY_ASK_SYSTEM_PROMPT,
-        },
+        { role: 'system', content: UNITY_ASK_SYSTEM_PROMPT },
         ...priorTurns,
         {
           role: 'user',
-          content: `${question}\n\n---\nRelevant context from knowledge base:\n${fullContext}`,
+          content: `${question}\n\n---\nKnowledge base context:\n${fullContext}`,
         },
       ],
     });
 
     const answer = completion.choices[0].message.content ?? 'No response generated.';
 
-    // 4. Shape citations for the frontend
-    const citations = docs.map((d) => ({
+    // 5. Shape citations — same order as context (internal first, then external)
+    const orderedDocs = [...internal, ...external];
+    const citations = orderedDocs.map((d) => ({
       id: d.id,
       source: d.source,
       title: d.title,
