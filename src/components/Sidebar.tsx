@@ -57,9 +57,7 @@ export default function Sidebar({ activeSources, onToggleSource }: SidebarProps)
       {/* Logo */}
       <div className="px-6 py-5 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-earth flex items-center justify-center text-white font-bold text-sm">
-            U
-          </div>
+          <div className="unity-mark h-8 w-8 rounded-lg text-sm">U</div>
           <div>
             <h1 className="text-white font-semibold text-base leading-tight">Unity</h1>
             <p className="text-slate-500 text-xs">Internal Knowledge</p>
@@ -78,6 +76,7 @@ export default function Sidebar({ activeSources, onToggleSource }: SidebarProps)
             const active = activeSources.includes(source);
             return (
               <button
+                type="button"
                 key={source}
                 onClick={() => onToggleSource(source)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${
@@ -100,21 +99,23 @@ export default function Sidebar({ activeSources, onToggleSource }: SidebarProps)
 
         {/* Web URL panel — shown when Web source is active */}
         {webActive && (
-          <div className="mt-4 mx-1 p-3 rounded-lg bg-card border border-border">
-            <p className="text-slate-400 text-xs font-semibold mb-2">Index websites</p>
+          <div className="panel mt-5 mx-0.5 p-4 space-y-3">
+            <p className="text-slate-300 text-xs font-semibold tracking-tight">Index websites</p>
 
             {/* URL list */}
             {urls.length > 0 && (
-              <div className="mb-2 space-y-1">
+              <div className="space-y-1.5">
                 {urls.map((url) => (
                   <div
                     key={url}
-                    className="flex items-center gap-1.5 text-xs text-slate-400 group"
+                    className="flex items-center gap-2 text-xs text-slate-400 group rounded-md px-1 py-0.5 hover:bg-surface/80"
                   >
                     <span className="truncate flex-1">{url.replace(/^https?:\/\//, '')}</span>
                     <button
+                      type="button"
                       onClick={() => removeUrl(url)}
-                      className="text-slate-600 hover:text-mars opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      aria-label={`Remove ${url}`}
+                      className="text-slate-600 hover:text-mars opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity shrink-0 rounded px-1"
                     >
                       ✕
                     </button>
@@ -124,50 +125,46 @@ export default function Sidebar({ activeSources, onToggleSource }: SidebarProps)
             )}
 
             {/* URL input */}
-            <div className="flex gap-1 mb-2">
+            <div className="flex gap-2">
               <input
-                className="flex-1 bg-surface border border-border text-slate-200 placeholder-slate-600 text-xs rounded px-2 py-1.5 focus:outline-none focus:border-earth"
+                className="flex-1 min-w-0 bg-surface border border-border text-slate-200 placeholder-slate-600 text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:border-earth focus-visible:ring-1 focus-visible:ring-earth/40"
                 placeholder="https://docs.example.com"
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addUrl()}
               />
               <button
+                type="button"
                 onClick={addUrl}
-                className="text-xs bg-earth/20 hover:bg-earth/30 text-earth px-2 py-1.5 rounded transition-colors"
+                className="text-xs shrink-0 bg-earth/20 hover:bg-earth/35 text-earth font-medium px-2.5 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/40"
               >
                 Add
               </button>
             </div>
 
-            {/* Crawl toggle */}
-            <label className="flex items-center gap-2 mb-2 cursor-pointer">
-              <div
-                onClick={() => setCrawl((v) => !v)}
-                className={`w-7 h-4 rounded-full transition-colors relative ${
-                  crawl ? 'bg-earth' : 'bg-slate-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${
-                    crawl ? 'translate-x-3.5' : 'translate-x-0.5'
-                  }`}
-                />
-              </div>
-              <span className="text-xs text-slate-400">Crawl entire site</span>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={crawl}
+                onChange={(e) => setCrawl(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-border bg-surface text-earth focus:ring-earth focus:ring-offset-0 focus:ring-2"
+              />
+              <span className="text-xs text-slate-400 leading-snug">Crawl entire site</span>
             </label>
 
-            {/* Index button */}
             <button
+              type="button"
               onClick={handleIndex}
               disabled={!urls.length || indexing}
-              className="w-full text-xs bg-earth hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white py-1.5 rounded transition-colors"
+              className="btn-primary-sm w-full disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:brightness-100"
             >
               {indexing ? 'Indexing…' : `Index ${urls.length || ''} URL${urls.length !== 1 ? 's' : ''}`}
             </button>
 
             {indexMsg && (
-              <p className="mt-2 text-xs text-slate-500 leading-tight">{indexMsg}</p>
+              <p className="text-xs text-slate-500 leading-relaxed border-t border-border/60 pt-2">
+                {indexMsg}
+              </p>
             )}
           </div>
         )}

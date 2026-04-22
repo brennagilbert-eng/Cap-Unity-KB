@@ -18,10 +18,11 @@ npm install
 
 1. Go to [supabase.com](https://supabase.com) → **New project** (free tier is fine)
 2. Once created, go to **Settings → API** and copy:
-   - **Project URL**
-   - **anon** public key
-   - **service_role** secret key
+   - **Project URL** → `SUPABASE_URL`
+   - **service_role** secret key → `SUPABASE_SERVICE_ROLE_KEY` (server only; never ship to the browser)
 3. Go to **SQL Editor** and run the contents of [`supabase/schema.sql`](./supabase/schema.sql)
+
+The **anon** key is not used by the current app; it is listed in `.env.example` only if you add client-side Supabase later.
 
 ### 3. Get an OpenAI API key
 
@@ -33,18 +34,20 @@ Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys) and c
 cp .env.example .env
 ```
 
-Open `.env` and fill in **at minimum** these five values:
+Open `.env` and fill in **at minimum** these three values (the server validates them on ask/ingest):
 
 ```env
 OPENAI_API_KEY=sk-...
 
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
 ```
 
-The connector credentials (Confluence, Jira, Slack, Drive) in `.env` are optional for local dev — ingestion can be run via the Cowork MCP connections instead.
+Optional model overrides: `OPENAI_MODEL`, `OPENAI_EMBEDDING_MODEL` (defaults are in `.env.example`).
+
+**Optional — browser Supabase (not used today):** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are reserved for a future client feature; the React app talks to the API only.
+
+**Optional — ingestion:** Confluence, Jira, Slack, Drive, and web URL env vars in `.env` are only needed when you run `npm run ingest` / `npm run ingest:*` or index specific sources. Add credentials only for the connectors you use.
 
 ### 5. Run the app
 
@@ -104,7 +107,7 @@ Ingestion is safe to re-run — it upserts, so existing documents are updated ra
 
 ## Environment variables reference
 
-See [`.env.example`](./.env.example) for all variables. Required ones are marked above. Connector credentials are only needed if running ingestion locally without Cowork MCP connections.
+See [`.env.example`](./.env.example) for the full list. Minimum for chat + vector search is OpenAI + Supabase server keys plus the schema. Connectors are optional and per-source.
 
 ---
 

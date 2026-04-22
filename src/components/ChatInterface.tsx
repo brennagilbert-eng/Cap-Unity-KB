@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Message, Source } from '../App';
 import MessageBubble from './MessageBubble';
+import { SOURCE_CONFIG } from './SourceBadge';
 import { askQuestion } from '../lib/api';
 
 interface ChatInterfaceProps {
@@ -86,22 +87,24 @@ export default function ChatInterface({
 
   const empty = messages.length === 0;
 
+  const searchSubtitle =
+    activeSources.length === 0
+      ? 'No sources selected'
+      : `Searching ${activeSources.map((s) => SOURCE_CONFIG[s].label).join(' · ')}`;
+
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
       <header className="px-6 py-4 border-b border-border bg-night flex items-center justify-between shrink-0">
         <div>
           <h2 className="text-white font-semibold text-sm">Ask Unity</h2>
-          <p className="text-slate-500 text-xs mt-0.5">
-            {activeSources.length === 0
-              ? 'No sources selected'
-              : `Searching ${activeSources.join(', ')}`}
-          </p>
+          <p className="text-slate-500 text-xs mt-0.5">{searchSubtitle}</p>
         </div>
         {messages.length > 0 && (
           <button
+            type="button"
             onClick={() => setMessages([])}
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
           >
             Clear chat
           </button>
@@ -111,25 +114,24 @@ export default function ChatInterface({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {empty ? (
-          <div className="flex flex-col items-center justify-center h-full gap-8 text-center">
+          <div className="max-w-3xl mx-auto w-full flex flex-col items-center justify-center min-h-[min(70vh,36rem)] gap-10 text-center py-8">
             <div>
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-earth to-mars mx-auto mb-4 flex items-center justify-center text-2xl font-bold text-white">
-                U
-              </div>
-              <h3 className="text-white font-semibold text-xl">What do you want to know?</h3>
-              <p className="text-slate-500 text-sm mt-2 max-w-sm">
-                Ask anything about Capacity's product, roadmap, positioning, or past work. I'll
-                pull answers from Confluence, Jira, Slack, and Drive.
+              <div className="unity-mark mx-auto mb-5 h-10 w-10 rounded-xl text-base">U</div>
+              <h3 className="text-white font-semibold text-xl tracking-tight">
+                What do you want to know?
+              </h3>
+              <p className="text-slate-500 text-sm mt-3 max-w-md mx-auto leading-relaxed">
+                Ask anything about Capacity's product, roadmap, positioning, or past work. Answers
+                draw on Confluence, Jira, Slack, Drive, and indexed web pages.
               </p>
             </div>
 
-            {/* Suggested questions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
               {SUGGESTED_QUESTIONS.map((q) => (
                 <button
                   key={q}
                   onClick={() => handleSubmit(q)}
-                  className="card px-4 py-3 text-left text-sm text-slate-300 hover:text-white hover:border-earth/50 transition-all"
+                  className="card px-4 py-3 text-left text-sm text-slate-300 hover:text-white hover:border-earth/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
                 >
                   {q}
                 </button>
