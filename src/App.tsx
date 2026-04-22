@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 
 export type Source = 'confluence' | 'jira' | 'slack' | 'drive' | 'web';
@@ -36,13 +35,13 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar activeSources={activeSources} onToggleSource={toggleSource} />
+    <div className="flex h-screen overflow-hidden bg-surface">
       <main className="flex-1 flex flex-col min-w-0">
         <ChatInterface
           messages={messages}
           setMessages={setMessages}
           activeSources={activeSources}
+          onToggleSource={toggleSource}
         />
       </main>
     </div>

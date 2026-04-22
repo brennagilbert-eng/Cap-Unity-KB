@@ -4,13 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        night: '#002B67',
+        night: '#FFFFFF',
         earth: '#007DFF',
-        sun: '#FF9F00',
-        mars: '#FF0E47',
-        surface: '#001A40',
-        card: '#00234F',
-        border: '#003580',
+        sun: '#F59E0B',
+        mars: '#EF4444',
+        surface: '#F0F5FF',
+        card: '#FFFFFF',
+        border: '#D6E4FF',
+        muted: '#6B8CC7',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

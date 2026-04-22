@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Message, Source } from '../App';
+import { ALL_SOURCES } from '../App';
 import MessageBubble from './MessageBubble';
 import { SOURCE_CONFIG } from './SourceBadge';
 import { askQuestion, parseDocument, type ParsedDoc, type HistoryMessage } from '../lib/api';
@@ -8,6 +9,7 @@ interface ChatInterfaceProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   activeSources: Source[];
+  onToggleSource: (source: Source) => void;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -23,6 +25,7 @@ export default function ChatInterface({
   messages,
   setMessages,
   activeSources,
+  onToggleSource,
 }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,7 +49,6 @@ export default function ChatInterface({
       alert(`Could not parse file: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setParsing(false);
-      // Reset input so same file can be re-attached
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
@@ -85,7 +87,6 @@ export default function ChatInterface({
     setLoading(true);
 
     try {
-      // Build conversation history from all completed (non-loading) messages before this turn
       const history: HistoryMessage[] = messages
         .filter((m) => !m.loading && m.content)
         .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
@@ -105,7 +106,7 @@ export default function ChatInterface({
           m.id === loadingMsg.id
             ? {
                 ...m,
-                content: `⚠️ **Could not get an answer.**\n\n${detail}\n\nFix \`.env\` and restart the server if the message mentions keys or Supabase. For "Failed to fetch", run \`npm run dev\` and match Vite's proxy port to Express (\`PORT\` / \`API_PORT\`).`,
+                content: `⚠️ **Could not get an answer.**\n\n${detail}\n\nFix \`.env\` and restart the server if the message mentions keys or Supabase.`,
                 loading: false,
               }
             : m,
@@ -118,28 +119,51 @@ export default function ChatInterface({
 
   const empty = messages.length === 0;
 
-  const searchSubtitle =
-    activeSources.length === 0
-      ? 'No sources selected'
-      : `Searching ${activeSources.map((s) => SOURCE_CONFIG[s].label).join(' · ')}`;
-
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
-      <header className="px-6 py-4 border-b border-border bg-night flex items-center justify-between shrink-0">
-        <div>
-          <h2 className="text-white font-semibold text-sm">Ask Unity</h2>
-          <p className="text-slate-500 text-xs mt-0.5">{searchSubtitle}</p>
+      <header className="px-6 py-3 border-b border-border bg-white flex items-center justify-between shrink-0 shadow-sm shadow-blue-50">
+        {/* Logo */}
+        <img
+          src="/capacity-logo.png"
+          alt="Capacity"
+          className="h-7 w-auto"
+        />
+
+        {/* Source filter pills */}
+        <div className="flex items-center gap-1.5">
+          {ALL_SOURCES.map((source) => {
+            const { label, icon } = SOURCE_CONFIG[source];
+            const active = activeSources.includes(source);
+            return (
+              <button
+                key={source}
+                type="button"
+                onClick={() => onToggleSource(source)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  active
+                    ? 'bg-earth text-white shadow-sm shadow-earth/30'
+                    : 'bg-surface text-slate-500 hover:text-earth hover:bg-blue-50 border border-border'
+                }`}
+              >
+                <span>{icon}</span>
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </div>
+
+        {/* Clear button */}
         {messages.length > 0 && (
           <button
             type="button"
             onClick={() => setMessages([])}
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
+            className="text-xs text-slate-400 hover:text-earth transition-colors rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
           >
             Clear chat
           </button>
         )}
+        {messages.length === 0 && <div className="w-20" />}
       </header>
 
       {/* Messages */}
@@ -147,11 +171,13 @@ export default function ChatInterface({
         {empty ? (
           <div className="max-w-3xl mx-auto w-full flex flex-col items-center justify-center min-h-[min(70vh,36rem)] gap-10 text-center py-8">
             <div>
-              <div className="unity-mark mx-auto mb-5 h-10 w-10 rounded-xl text-base">U</div>
-              <h3 className="text-white font-semibold text-xl tracking-tight">
+              <div className="mx-auto mb-5">
+                <img src="/capacity-logo.png" alt="Capacity" className="h-10 w-auto mx-auto opacity-20" />
+              </div>
+              <h3 className="text-slate-800 font-semibold text-xl tracking-tight">
                 Describe a customer problem.
               </h3>
-              <p className="text-slate-500 text-sm mt-3 max-w-md mx-auto leading-relaxed">
+              <p className="text-slate-400 text-sm mt-3 max-w-md mx-auto leading-relaxed">
                 Unity acts as your solutions consultant — map customer needs to the right Capacity
                 products across the full portfolio, grounded in real documentation.
               </p>
@@ -162,7 +188,7 @@ export default function ChatInterface({
                 <button
                   key={q}
                   onClick={() => handleSubmit(q)}
-                  className="card px-4 py-3 text-left text-sm text-slate-300 hover:text-white hover:border-earth/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
+                  className="bg-white border border-border rounded-xl px-4 py-3 text-left text-sm text-slate-600 hover:text-earth hover:border-earth/40 hover:shadow-sm hover:shadow-blue-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
                 >
                   {q}
                 </button>
@@ -180,23 +206,23 @@ export default function ChatInterface({
       </div>
 
       {/* Input */}
-      <div className="px-6 py-4 border-t border-border bg-night shrink-0">
+      <div className="px-6 py-4 border-t border-border bg-white shrink-0">
         <div className="max-w-3xl mx-auto flex flex-col gap-2">
 
           {/* Attached doc pill */}
           {attachedDoc && (
-            <div className="flex items-center gap-2 bg-card border border-earth/30 rounded-lg px-3 py-2 text-xs">
+            <div className="flex items-center gap-2 bg-blue-50 border border-earth/20 rounded-lg px-3 py-2 text-xs">
               <svg className="w-3.5 h-3.5 text-earth shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
-              <span className="text-slate-300 truncate flex-1 min-w-0">{attachedDoc.filename}</span>
+              <span className="text-slate-600 truncate flex-1 min-w-0">{attachedDoc.filename}</span>
               {attachedDoc.truncated && (
                 <span className="text-sun shrink-0">truncated</span>
               )}
-              <span className="text-slate-500 shrink-0">{Math.round(attachedDoc.charCount / 1000)}k chars</span>
+              <span className="text-slate-400 shrink-0">{Math.round(attachedDoc.charCount / 1000)}k chars</span>
               <button
                 onClick={removeAttachment}
-                className="text-slate-500 hover:text-mars transition-colors shrink-0 ml-1"
+                className="text-slate-400 hover:text-mars transition-colors shrink-0 ml-1"
                 aria-label="Remove attachment"
               >
                 ✕
@@ -204,7 +230,6 @@ export default function ChatInterface({
             </div>
           )}
 
-          {/* Parsing indicator */}
           {parsing && (
             <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
               <span className="animate-pulse">Parsing document…</span>
@@ -212,7 +237,6 @@ export default function ChatInterface({
           )}
 
           <div className="flex gap-3">
-            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -227,7 +251,7 @@ export default function ChatInterface({
               onClick={() => fileInputRef.current?.click()}
               disabled={loading || parsing}
               title="Attach a document (PDF, Word, TXT)"
-              className="shrink-0 h-11 w-11 flex items-center justify-center rounded-lg border border-border bg-card text-slate-400 hover:text-earth hover:border-earth/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
+              className="shrink-0 h-11 w-11 flex items-center justify-center rounded-lg border border-border bg-surface text-slate-400 hover:text-earth hover:border-earth/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -261,7 +285,7 @@ export default function ChatInterface({
             </button>
           </div>
         </div>
-        <p className="text-center text-slate-700 text-xs mt-2">
+        <p className="text-center text-slate-300 text-xs mt-2">
           Answers are grounded in indexed sources. Always verify critical details.
         </p>
       </div>

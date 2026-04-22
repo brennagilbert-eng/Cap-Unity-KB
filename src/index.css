@@ -6,17 +6,17 @@
 
 @layer base {
   body {
-    @apply bg-surface text-slate-100 antialiased font-sans;
+    @apply bg-surface text-slate-800 antialiased font-sans;
   }
 
   ::-webkit-scrollbar {
     width: 5px;
   }
   ::-webkit-scrollbar-track {
-    background: #001A40;
+    background: #E8EFFF;
   }
   ::-webkit-scrollbar-thumb {
-    background: #003580;
+    background: #B3CFFF;
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
@@ -28,26 +28,25 @@
   .btn-primary {
     @apply bg-earth text-white font-medium px-4 py-2 rounded-lg transition-colors;
     @apply hover:brightness-110 active:brightness-95;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/45 focus-visible:ring-offset-2 focus-visible:ring-offset-night;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
   .btn-primary-sm {
     @apply btn-primary text-xs py-2 px-3;
   }
   .btn-ghost {
-    @apply bg-transparent hover:bg-card text-slate-300 hover:text-white px-3 py-2 rounded-lg transition-colors;
+    @apply bg-transparent hover:bg-surface text-slate-500 hover:text-slate-800 px-3 py-2 rounded-lg transition-colors;
   }
   .card {
     @apply bg-card border border-border rounded-xl;
   }
   .panel {
-    @apply rounded-xl bg-card border border-border shadow-sm shadow-black/20;
+    @apply rounded-xl bg-card border border-border shadow-sm shadow-blue-100;
   }
   .input-base {
-    @apply bg-card border border-border text-slate-100 placeholder-slate-500 rounded-lg px-4 py-3 transition-colors;
-    @apply focus:outline-none focus:border-earth focus-visible:ring-2 focus-visible:ring-earth/30 focus-visible:ring-offset-2 focus-visible:ring-offset-night;
+    @apply bg-white border border-border text-slate-800 placeholder-slate-400 rounded-lg px-4 py-3 transition-colors;
+    @apply focus:outline-none focus:border-earth focus-visible:ring-2 focus-visible:ring-earth/25 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
-  /** Shared Unity avatar / logo mark (pair with explicit w-* h-* rounded-* text-*) */
   .unity-mark {
-    @apply inline-flex shrink-0 items-center justify-center bg-gradient-to-br from-earth to-mars font-bold text-white shadow-md shadow-earth/20;
+    @apply inline-flex shrink-0 items-center justify-center bg-gradient-to-br from-earth to-blue-400 font-bold text-white shadow-md shadow-earth/20;
   }
 }
