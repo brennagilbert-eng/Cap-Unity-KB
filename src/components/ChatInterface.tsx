@@ -71,11 +71,15 @@ export default function ChatInterface({
     const recognition = new SR();
     recognition.lang = 'en-US';
     recognition.interimResults = false;
-    recognition.continuous = false;
+    recognition.continuous = true;
 
     recognition.onresult = (e) => {
-      const transcript = e.results[0]?.[0]?.transcript ?? '';
-      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      const transcript = Array.from(e.results)
+        .slice(e.resultIndex)
+        .map((r) => r[0]?.transcript ?? '')
+        .join(' ')
+        .trim();
+      if (transcript) setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
     };
     recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
@@ -108,6 +112,12 @@ export default function ChatInterface({
   async function handleSubmit(question?: string) {
     const text = (question ?? input).trim();
     if (!text || loading) return;
+
+    // Stop mic if still listening
+    if (recognitionRef.current && listening) {
+      recognitionRef.current.stop();
+      setListening(false);
+    }
 
     const docCtx = attachedDoc
       ? { filename: attachedDoc.filename, content: attachedDoc.content }
