@@ -148,20 +148,20 @@ function CitationList({ citations }: { citations: NonNullable<Message['citations
         Sources
       </p>
       <ul className="flex flex-col gap-2 list-none m-0 p-0">
-        {visible.map((citation) => (
+        {visible.map((citation, idx) => (
           <li key={citation.id}>
             <a
               href={citation.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-lg px-1 py-1 -mx-1 group hover:bg-blue-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
+              className="flex items-center gap-2.5 rounded-lg px-1 py-1 -mx-1 group hover:bg-blue-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-earth/35"
             >
+              <span className="text-[0.65rem] font-semibold text-earth/70 tabular-nums shrink-0 w-5 text-center">
+                [{idx + 1}]
+              </span>
               <SourceBadge source={citation.source} />
               <span className="text-xs text-slate-500 group-hover:text-earth transition-colors truncate flex-1 min-w-0">
                 {citation.title}
-              </span>
-              <span className="text-[0.65rem] text-slate-400 tabular-nums shrink-0">
-                {Math.round(citation.similarity * 100)}%
               </span>
             </a>
           </li>
