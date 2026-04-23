@@ -29,4 +29,5 @@ export interface DocumentRow {
   url: string;
   author?: string;
   similarity?: number;
+  updated_at?: string;
 }

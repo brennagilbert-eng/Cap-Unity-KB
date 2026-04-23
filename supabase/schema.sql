@@ -29,6 +29,8 @@ create index if not exists documents_embedding_idx
 create index if not exists documents_source_idx on documents (source);
 
 -- ── Semantic search function ──────────────────────────────
+-- Returns extra candidates so the application layer can apply recency re-ranking.
+-- updated_at is included so the app can boost recently indexed/updated docs.
 create or replace function match_documents(
   query_embedding vector(1536),
   match_count     int      default 6,
@@ -42,7 +44,8 @@ returns table (
   content     text,
   url         text,
   author      text,
-  similarity  float
+  similarity  float,
+  updated_at  timestamptz
 )
 language plpgsql
 as $$
@@ -56,7 +59,8 @@ begin
     d.content,
     d.url,
     d.author,
-    1 - (d.embedding <=> query_embedding) as similarity
+    1 - (d.embedding <=> query_embedding) as similarity,
+    d.updated_at
   from documents d
   where
     (filter_sources is null or d.source = any(filter_sources))

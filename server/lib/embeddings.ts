@@ -10,7 +10,21 @@ export async function embedText(text: string): Promise<number[]> {
   return res.data[0].embedding;
 }
 
-/** Search the knowledge base for chunks semantically similar to a query */
+/**
+ * Recency multiplier: boosts docs updated recently.
+ * Brand-new doc (+15%), 30 days (~10%), 90 days (~5%), 180+ days (~1%).
+ * Uses exponential decay: bonus = 0.15 * exp(-days / 90)
+ */
+function recencyMultiplier(updatedAt?: string): number {
+  if (!updatedAt) return 1;
+  const days = (Date.now() - new Date(updatedAt).getTime()) / 86_400_000;
+  return 1 + 0.15 * Math.exp(-days / 90);
+}
+
+/** Search the knowledge base for chunks semantically similar to a query.
+ *  Fetches 2× candidates then re-ranks with a recency boost so recently
+ *  updated docs surface above stale ones at the same similarity score.
+ */
 export async function searchDocuments(
   query: string,
   sources: string[],
@@ -18,14 +32,25 @@ export async function searchDocuments(
 ): Promise<DocumentRow[]> {
   const embedding = await embedText(query);
 
+  // Fetch extra candidates so re-ranking has room to work
   const { data, error } = await supabase.rpc('match_documents', {
     query_embedding: embedding,
-    match_count: matchCount,
+    match_count: matchCount * 2,
     filter_sources: sources.length > 0 ? sources : null,
   });
 
   if (error) throw new Error(`Supabase search error: ${error.message}`);
-  return (data as DocumentRow[]) ?? [];
+
+  const rows = (data as DocumentRow[]) ?? [];
+
+  // Re-rank by similarity × recency multiplier, return top matchCount
+  return rows
+    .map((row) => ({
+      ...row,
+      _boosted: (row.similarity ?? 0) * recencyMultiplier(row.updated_at),
+    }))
+    .sort((a, b) => b._boosted - a._boosted)
+    .slice(0, matchCount);
 }
 
 /** Upsert a document chunk into the knowledge base */
